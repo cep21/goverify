@@ -38,6 +38,10 @@
       "check": {
         "args": ["tool", "vet", "$1"]
       },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "golang.org/x/tools/cmd/vet"]
+      },
       "each": {
         "cmd": "git",
         "args": ["ls-files", "--", "*.go"]
@@ -49,6 +53,10 @@
       "check": {
         "args": ["-min_confidence=.3", "$1"]
       },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/golang/lint/golint"]
+      },
       "each": {
         "cmd": "git",
         "args": ["ls-files", "--", "*.go"]
@@ -59,6 +67,10 @@
       "cmd": "gocyclo",
       "check": {
         "args": ["-over", "10", "$1"]
+      },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/fzipp/gocyclo"]
       },
       "each": {
         "cmd": "git",

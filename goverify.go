@@ -53,7 +53,7 @@ func (e *eachFileLister) filteredFilename(filename string) bool {
 }
 
 type checkCmd struct {
-	Cmd string `json:"cmd"`
+	Cmd  string   `json:"cmd"`
 	Args []string `json:"args"`
 }
 
@@ -61,8 +61,8 @@ type check struct {
 	Name string `json:"name"`
 	Cmd  string `json:"cmd"`
 
-	Fix   *checkCmd `json:"fix"`
-	Check *checkCmd `json:"check"`
+	Fix     *checkCmd `json:"fix"`
+	Check   *checkCmd `json:"check"`
 	Install *checkCmd `json:"install"`
 
 	Each    *eachFileLister `json:"each"`
