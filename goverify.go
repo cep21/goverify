@@ -53,6 +53,7 @@ func (e *eachFileLister) filteredFilename(filename string) bool {
 }
 
 type checkCmd struct {
+	Cmd string `json:"cmd"`
 	Args []string `json:"args"`
 }
 
@@ -62,6 +63,7 @@ type check struct {
 
 	Fix   *checkCmd `json:"fix"`
 	Check *checkCmd `json:"check"`
+	Install *checkCmd `json:"install"`
 
 	Each    *eachFileLister `json:"each"`
 	Options json.RawMessage
@@ -150,6 +152,13 @@ func (p *goverify) checkStream(conf config, c check) error {
 	}
 	if c.Each != nil {
 		c.Each.IgnoreDir = append(c.Each.IgnoreDir, conf.IgnoreDir...)
+	}
+	_, err = exec.LookPath(c.Cmd)
+	if err != nil && c.Install != nil {
+		// Try to install
+		if err = exec.Command(c.Install.Cmd, c.Install.Args...).Run(); err != nil {
+			return err
+		}
 	}
 	checkOutput := p.runCheck(conf, c)
 	var lastError error

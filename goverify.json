@@ -9,6 +9,10 @@
       "check": {
         "args": ["-l", "$1"]
       },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "golang.org/x/tools/cmd/goimports"]
+      },
       "each": {
         "cmd": "git",
         "args": ["ls-files", "--", "*.go"]
