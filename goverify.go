@@ -155,6 +155,7 @@ func (p *goverify) checkStream(conf config, c check) error {
 	}
 	_, err = exec.LookPath(c.Cmd)
 	if err != nil && c.Install != nil {
+		p.logger.Printf("Installing %s %s", c.Install.Cmd, c.Install.Args)
 		// Try to install
 		if err = exec.Command(c.Install.Cmd, c.Install.Args...).Run(); err != nil {
 			return err
