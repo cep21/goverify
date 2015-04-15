@@ -64,6 +64,7 @@ type check struct {
 	Fix     *checkCmd `json:"fix"`
 	Check   *checkCmd `json:"check"`
 	Install *checkCmd `json:"install"`
+	Gotool string `json:"gotool"`
 
 	Each    *eachFileLister `json:"each"`
 	Options json.RawMessage
@@ -153,8 +154,23 @@ func (p *goverify) checkStream(conf config, c check) error {
 	if c.Each != nil {
 		c.Each.IgnoreDir = append(c.Each.IgnoreDir, conf.IgnoreDir...)
 	}
+	toolFound := true
+	if c.Gotool != "" {
+		toolBytes, err := exec.Command("go", "tool").CombinedOutput()
+		if err != nil {
+			return err
+		}
+		toolFound = func() bool {
+			for _, tool := range strings.Split(string(toolBytes), "\n") {
+				if tool == c.Gotool {
+					return true
+				}
+			}
+			return false
+		}
+	}
 	_, err = exec.LookPath(c.Cmd)
-	if err != nil && c.Install != nil {
+	if c.Install != nil && (err != nil || !toolFound) {
 		p.logger.Printf("Installing %s %s", c.Install.Cmd, c.Install.Args)
 		// Try to install
 		if err = exec.Command(c.Install.Cmd, c.Install.Args...).Run(); err != nil {
