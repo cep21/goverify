@@ -88,6 +88,11 @@
     {
       "name": "code coverage",
       "cmd": "go",
+      "gotool": "cover",
+      "install": {
+        "cmd": "go",
+        "args": ["get", "golang.org/x/tools/cmd/cover"]
+      },
       "check": {
         "args": ["test", "-cover", "-covermode", "atomic", "-race", "-parallel=8", "-timeout", "3s", "-cpu", "4", "./..."]
       },
