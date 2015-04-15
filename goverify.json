@@ -38,6 +38,7 @@
       "check": {
         "args": ["tool", "vet", "$1"]
       },
+      "gotool": "vet",
       "install": {
         "cmd": "go",
         "args": ["get", "golang.org/x/tools/cmd/vet"]
