@@ -64,7 +64,7 @@ type check struct {
 	Fix     *checkCmd `json:"fix"`
 	Check   *checkCmd `json:"check"`
 	Install *checkCmd `json:"install"`
-	Gotool string `json:"gotool"`
+	Gotool  string    `json:"gotool"`
 
 	Each    *eachFileLister `json:"each"`
 	Options json.RawMessage
@@ -145,15 +145,7 @@ func (p *goverify) main() error {
 	return nil
 }
 
-func (p *goverify) checkStream(conf config, c check) error {
-	var err error
-	c.validateDecoded, err = p.getValidator(c)
-	if err != nil {
-		return err
-	}
-	if c.Each != nil {
-		c.Each.IgnoreDir = append(c.Each.IgnoreDir, conf.IgnoreDir...)
-	}
+func (p *goverify) installToolIfNeeded(conf config, c check) error {
 	toolFound := true
 	if c.Gotool != "" {
 		toolBytes, err := exec.Command("go", "tool").CombinedOutput()
@@ -167,15 +159,30 @@ func (p *goverify) checkStream(conf config, c check) error {
 				}
 			}
 			return false
-		}
+		}()
 	}
-	_, err = exec.LookPath(c.Cmd)
+	_, err := exec.LookPath(c.Cmd)
 	if c.Install != nil && (err != nil || !toolFound) {
 		p.logger.Printf("Installing %s %s", c.Install.Cmd, c.Install.Args)
 		// Try to install
 		if err = exec.Command(c.Install.Cmd, c.Install.Args...).Run(); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (p *goverify) checkStream(conf config, c check) error {
+	var err error
+	c.validateDecoded, err = p.getValidator(c)
+	if err != nil {
+		return err
+	}
+	if c.Each != nil {
+		c.Each.IgnoreDir = append(c.Each.IgnoreDir, conf.IgnoreDir...)
+	}
+	if err = p.installToolIfNeeded(conf, c); err != nil {
+		return err
 	}
 	checkOutput := p.runCheck(conf, c)
 	var lastError error
