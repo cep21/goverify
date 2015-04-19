@@ -105,14 +105,12 @@ type check struct {
 
 	Each *eachFileLister `json:"each"`
 
-	IgnoreMsg []string `json:"ignoreMsg"`
-
 	Validator       json.RawMessage `json:"validate"`
 	validateDecoded cmdValidator
 }
 
 func (c *check) String() string {
-	return fmt.Sprintf("Name: %s | Cmd: %s | Fix: %s | Check: %s | Install: %s | Gotool: %s | Macro: %s | Each: %s | IgnoreMsg: %s | Validator: %s", c.Name, c.Cmd, c.Fix, c.Check, c.Install, c.Gotool, c.Macro, c.Each, c.IgnoreMsg, c.Validator)
+	return fmt.Sprintf("Name: %s | Cmd: %s | Fix: %s | Check: %s | Install: %s | Gotool: %s | Macro: %s | Each: %s | Validator: %s", c.Name, c.Cmd, c.Fix, c.Check, c.Install, c.Gotool, c.Macro, c.Each, c.Validator)
 }
 
 func (c *check) mergePropertiesFrom(macroDef check) {
@@ -126,8 +124,6 @@ func (c *check) mergePropertiesFrom(macroDef check) {
 	c.Gotool = nonEmptyStr(c.Gotool, macroDef.Gotool)
 
 	c.Each = mergeEachFileLister(c.Each, macroDef.Each)
-
-	c.IgnoreMsg = nonEmptyStrArr(c.IgnoreMsg, macroDef.IgnoreMsg)
 
 	_, unsetValidator := c.validateDecoded.(*emptyValidator)
 	if unsetValidator {
@@ -322,7 +318,7 @@ func (p *goverify) checkStream(conf config, c check) error {
 func (p *goverify) getValidator(c check) (cmdValidator, error) {
 	if c.Validator == nil {
 		return &emptyValidator{
-			IgnoreMsg: c.IgnoreMsg,
+			IgnoreMsg: []string{},
 		}, nil
 	}
 	var dest cmdValidator
@@ -334,7 +330,7 @@ func (p *goverify) getValidator(c check) (cmdValidator, error) {
 		dest = &coverageValidator{}
 	} else {
 		dest = &emptyValidator{
-			IgnoreMsg: c.IgnoreMsg,
+			IgnoreMsg: []string{},
 		}
 	}
 	if err := json.Unmarshal(c.Validator, dest); err != nil {
@@ -349,10 +345,19 @@ type cmdValidator interface {
 }
 
 type emptyValidator struct {
-	IgnoreMsg []string
+	validator
+	IgnoreMsg []string `json:"ignoreMsg"`
 }
 
 func (c *emptyValidator) MergePropertiesFrom(val json.RawMessage) {
+	if val == nil {
+		return
+	}
+	var other emptyValidator
+	if err := json.Unmarshal(val, &other); err != nil {
+		return
+	}
+	c.IgnoreMsg = nonEmptyStrArr(other.IgnoreMsg, c.IgnoreMsg)
 }
 
 func (c *emptyValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) error {
