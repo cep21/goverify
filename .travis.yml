@@ -6,4 +6,4 @@ go:
   - tip
 
 script:
-  - go run goverify.go -v
+  - go run macros.go goverify.go -v
