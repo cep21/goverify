@@ -249,18 +249,8 @@ func (p *goverify) main() error {
 			return err
 		}
 		if c.Macro != "" {
-			existingMacro, exists := conf.Macros[c.Macro]
-			if !exists {
-				return fmt.Errorf("unable to find macro %s", c.Macro)
-			}
-			p.logger.Printf("Loading properties for macro %s", c.Macro)
-			c.mergePropertiesFrom(existingMacro)
-			if c.validateDecoded == nil {
-				c.validateDecoded, _ = p.getValidator(existingMacro)
-				c.validateDecoded.MergePropertiesFrom(c.Validator)
-			}
-			if c.Macro == "go-cover" {
-				_ = c.validateDecoded.(*coverageValidator)
+			if err = p.copyFromMacro(conf, &c); err != nil {
+				return err
 			}
 		}
 		if cover, ok := c.validateDecoded.(*coverageValidator); ok {
@@ -269,6 +259,23 @@ func (p *goverify) main() error {
 		if err = p.checkStream(*conf, c); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (p *goverify) copyFromMacro(conf *config, c *check) error {
+	existingMacro, exists := conf.Macros[c.Macro]
+	if !exists {
+		return fmt.Errorf("unable to find macro %s", c.Macro)
+	}
+	p.logger.Printf("Loading properties for macro %s", c.Macro)
+	c.mergePropertiesFrom(existingMacro)
+	if c.validateDecoded == nil {
+		c.validateDecoded, _ = p.getValidator(existingMacro)
+		c.validateDecoded.MergePropertiesFrom(c.Validator)
+	}
+	if c.Macro == "go-cover" {
+		_ = c.validateDecoded.(*coverageValidator)
 	}
 	return nil
 }
@@ -334,8 +341,7 @@ func (p *goverify) getValidator(c check) (cmdValidator, error) {
 		return nil, err
 	}
 	if v.Type == "cover" {
-		dest = &coverageValidator{
-		}
+		dest = &coverageValidator{}
 	} else {
 		dest = &emptyValidator{
 			IgnoreMsg: []string{},
@@ -393,8 +399,8 @@ func (c *emptyValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) error
 
 type coverageValidator struct {
 	validator
-	RequiredCoverage float64 `json:"coverage"`
-	IgnoreDir []string `json:"ignoreDir"`
+	RequiredCoverage float64  `json:"coverage"`
+	IgnoreDir        []string `json:"ignoreDir"`
 }
 
 type coverageError struct {
