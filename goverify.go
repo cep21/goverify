@@ -53,21 +53,25 @@ func mergeEachFileLister(e1, e2 *eachFileLister) *eachFileLister {
 	}
 }
 
-func (e *eachFileLister) filteredFilename(filename string) bool {
-	if filename == "" {
-		return true
-	}
+func containsName(filename string, searchIn []string) bool {
 	for filename != "" && filename != "." {
 		var subdir string
 		filename, subdir = path.Split(filename)
 		filename = path.Clean(filename)
-		for _, d := range e.IgnoreDir {
+		for _, d := range searchIn {
 			if d == subdir {
 				return true
 			}
 		}
 	}
 	return false
+}
+
+func (e *eachFileLister) filteredFilename(filename string) bool {
+	if filename == "" {
+		return true
+	}
+	return containsName(filename, e.IgnoreDir)
 }
 
 type checkCmd struct {
@@ -259,6 +263,9 @@ func (p *goverify) main() error {
 				_ = c.validateDecoded.(*coverageValidator)
 			}
 		}
+		if cover, ok := c.validateDecoded.(*coverageValidator); ok {
+			cover.IgnoreDir = conf.IgnoreDir
+		}
 		if err = p.checkStream(*conf, c); err != nil {
 			return err
 		}
@@ -327,7 +334,8 @@ func (p *goverify) getValidator(c check) (cmdValidator, error) {
 		return nil, err
 	}
 	if v.Type == "cover" {
-		dest = &coverageValidator{}
+		dest = &coverageValidator{
+		}
 	} else {
 		dest = &emptyValidator{
 			IgnoreMsg: []string{},
@@ -386,6 +394,7 @@ func (c *emptyValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) error
 type coverageValidator struct {
 	validator
 	RequiredCoverage float64 `json:"coverage"`
+	IgnoreDir []string `json:"ignoreDir"`
 }
 
 type coverageError struct {
@@ -408,6 +417,7 @@ func (c *coverageValidator) MergePropertiesFrom(val json.RawMessage) {
 	if other.RequiredCoverage != 0 {
 		c.RequiredCoverage = other.RequiredCoverage
 	}
+	c.IgnoreDir = nonEmptyStrArr(other.IgnoreDir, c.IgnoreDir)
 }
 
 func (c *coverageValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) error {
@@ -428,6 +438,13 @@ func (c *coverageValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) er
 		}()
 		if err != nil {
 			return err
+		}
+		parts := strings.Split(coverout, "\t")
+		if len(parts) > 1 {
+			testPath := parts[1]
+			if containsName(testPath, c.IgnoreDir) {
+				continue
+			}
 		}
 		if matchPercent+.009 <= c.RequiredCoverage {
 			return &coverageError{
