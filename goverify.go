@@ -35,6 +35,24 @@ type eachFileLister struct {
 	IgnoreDir []string `json:"ignoreDir"`
 }
 
+func (e *eachFileLister) String() string {
+	return fmt.Sprintf("Cmd: %s | Args: %s | IgnoreDir: %s", e.Cmd, e.Args, e.IgnoreDir)
+}
+
+func mergeEachFileLister(e1, e2 *eachFileLister) *eachFileLister {
+	if e1 == nil {
+		return e2
+	}
+	if e2 == nil {
+		return e1
+	}
+	return &eachFileLister{
+		Cmd:       nonEmptyStr(e1.Cmd, e2.Cmd),
+		Args:      nonEmptyStrArr(e1.Args, e2.Args),
+		IgnoreDir: nonEmptyStrArr(e1.IgnoreDir, e2.IgnoreDir),
+	}
+}
+
 func (e *eachFileLister) filteredFilename(filename string) bool {
 	if filename == "" {
 		return true
@@ -57,6 +75,23 @@ type checkCmd struct {
 	Args []string `json:"args"`
 }
 
+func (c *checkCmd) String() string {
+	return fmt.Sprintf("Cmd: %s | Args: %s", c.Cmd, c.Args)
+}
+
+func mergeCheckCmd(c1, c2 *checkCmd) *checkCmd {
+	if c1 == nil {
+		return c2
+	}
+	if c2 == nil {
+		return c1
+	}
+	return &checkCmd{
+		Cmd:  nonEmptyStr(c1.Cmd, c2.Cmd),
+		Args: nonEmptyStrArr(c1.Args, c2.Args),
+	}
+}
+
 type check struct {
 	Name string `json:"name"`
 	Cmd  string `json:"cmd"`
@@ -64,10 +99,11 @@ type check struct {
 	Fix     *checkCmd `json:"fix"`
 	Check   *checkCmd `json:"check"`
 	Install *checkCmd `json:"install"`
-	Gotool  string    `json:"gotool"`
 
-	Each    *eachFileLister `json:"each"`
-	Options json.RawMessage
+	Gotool string `json:"gotool"`
+	Macro  string `json:"macro"`
+
+	Each *eachFileLister `json:"each"`
 
 	IgnoreMsg []string `json:"ignoreMsg"`
 
@@ -75,13 +111,52 @@ type check struct {
 	validateDecoded cmdValidator
 }
 
+func (c *check) String() string {
+	return fmt.Sprintf("Name: %s | Cmd: %s | Fix: %s | Check: %s | Install: %s | Gotool: %s | Macro: %s | Each: %s | IgnoreMsg: %s | Validator: %s", c.Name, c.Cmd, c.Fix, c.Check, c.Install, c.Gotool, c.Macro, c.Each, c.IgnoreMsg, c.Validator)
+}
+
+func (c *check) mergePropertiesFrom(macroDef check) {
+	c.Name = nonEmptyStr(c.Name, macroDef.Name)
+	c.Cmd = nonEmptyStr(c.Cmd, macroDef.Cmd)
+
+	c.Fix = mergeCheckCmd(c.Fix, macroDef.Fix)
+	c.Check = mergeCheckCmd(c.Check, macroDef.Check)
+	c.Install = mergeCheckCmd(c.Install, macroDef.Install)
+
+	c.Gotool = nonEmptyStr(c.Gotool, macroDef.Gotool)
+
+	c.Each = mergeEachFileLister(c.Each, macroDef.Each)
+
+	c.IgnoreMsg = nonEmptyStrArr(c.IgnoreMsg, macroDef.IgnoreMsg)
+
+	_, unsetValidator := c.validateDecoded.(*emptyValidator)
+	if unsetValidator {
+		c.validateDecoded = nil
+	}
+}
+
+func nonEmptyStr(s1, s2 string) string {
+	if s1 == "" {
+		return s2
+	}
+	return s1
+}
+
+func nonEmptyStrArr(s1, s2 []string) []string {
+	if len(s1) == 0 {
+		return s2
+	}
+	return s1
+}
+
 type validator struct {
 	Type string `json:"type"`
 }
 
 type config struct {
-	Checks           []check  `json:"checks"`
-	IgnoreDir        []string `json:"ignoreDir"`
+	Checks           []check          `json:"checks"`
+	Macros           map[string]check `json:"macros"`
+	IgnoreDir        []string         `json:"ignoreDir"`
 	rootPath         string
 	SimultaneousRuns int `json:"simultaneousRuns"`
 	GlobalIgnore     []string
@@ -115,30 +190,80 @@ func main() {
 	}
 }
 
-func (p *goverify) main() error {
-	if p.verbose {
-		p.logger = log.New(os.Stderr, "", log.LstdFlags)
-	} else {
-		p.logger = log.New(ioutil.Discard, "", log.LstdFlags)
+func (p *goverify) loadMacros(conf *config) error {
+	var err error
+	var macro config
+	if err = json.Unmarshal([]byte(macros), &macro); err != nil {
+		return err
 	}
+	if conf.Macros == nil {
+		conf.Macros = make(map[string]check)
+	}
+	conf.Checks = append(macro.Checks, conf.Checks...)
+	for k, v := range macro.Macros {
+		v.validateDecoded, err = p.getValidator(v)
+		if err != nil {
+			return err
+		}
+		conf.Macros[k] = v
+	}
+	return nil
+}
+
+func (p *goverify) loadConfig() (*config, error) {
 	var conf config
 	fileContent, err := ioutil.ReadFile(p.configFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = json.Unmarshal(fileContent, &conf); err != nil {
-		return err
+		return nil, err
+	}
+	if err = p.loadMacros(&conf); err != nil {
+		return nil, err
 	}
 	if conf.SimultaneousRuns == 0 {
 		conf.SimultaneousRuns = runtime.NumCPU()*2 + 1
 	}
 	fp, err := filepath.Abs(p.configFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	conf.rootPath = filepath.Dir(fp)
+	return &conf, nil
+}
+
+func (p *goverify) main() error {
+	if p.verbose {
+		p.logger = log.New(os.Stderr, "", log.LstdFlags)
+	} else {
+		p.logger = log.New(ioutil.Discard, "", log.LstdFlags)
+	}
+	conf, err := p.loadConfig()
+	if err != nil {
+		return err
+	}
 	for _, c := range conf.Checks {
-		if err = p.checkStream(conf, c); err != nil {
+		c.validateDecoded, err = p.getValidator(c)
+		if err != nil {
+			return err
+		}
+		if c.Macro != "" {
+			existingMacro, exists := conf.Macros[c.Macro]
+			if !exists {
+				return fmt.Errorf("unable to find macro %s", c.Macro)
+			}
+			p.logger.Printf("Loading properties for macro %s", c.Macro)
+			c.mergePropertiesFrom(existingMacro)
+			if c.validateDecoded == nil {
+				c.validateDecoded, _ = p.getValidator(existingMacro)
+				c.validateDecoded.MergePropertiesFrom(c.Validator)
+			}
+			if c.Macro == "go-cover" {
+				_ = c.validateDecoded.(*coverageValidator)
+			}
+		}
+		if err = p.checkStream(*conf, c); err != nil {
 			return err
 		}
 	}
@@ -174,10 +299,6 @@ func (p *goverify) installToolIfNeeded(conf config, c check) error {
 
 func (p *goverify) checkStream(conf config, c check) error {
 	var err error
-	c.validateDecoded, err = p.getValidator(c)
-	if err != nil {
-		return err
-	}
 	if c.Each != nil {
 		c.Each.IgnoreDir = append(c.Each.IgnoreDir, conf.IgnoreDir...)
 	}
@@ -224,10 +345,14 @@ func (p *goverify) getValidator(c check) (cmdValidator, error) {
 
 type cmdValidator interface {
 	Check(stdout *bytes.Buffer, stderr *bytes.Buffer) error
+	MergePropertiesFrom(val json.RawMessage)
 }
 
 type emptyValidator struct {
 	IgnoreMsg []string
+}
+
+func (c *emptyValidator) MergePropertiesFrom(val json.RawMessage) {
 }
 
 func (c *emptyValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) error {
@@ -267,6 +392,19 @@ func (c *coverageError) Error() string {
 	return fmt.Sprintf("Coverage %f less than required %f", c.seen, c.required)
 }
 
+func (c *coverageValidator) MergePropertiesFrom(val json.RawMessage) {
+	if val == nil {
+		return
+	}
+	var other coverageValidator
+	if err := json.Unmarshal(val, &other); err != nil {
+		return
+	}
+	if other.RequiredCoverage != 0 {
+		c.RequiredCoverage = other.RequiredCoverage
+	}
+}
+
 func (c *coverageValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) error {
 	pattern := regexp.MustCompile(`coverage: ([0-9\.]+)% of statements`)
 	for _, coverout := range strings.Split(stdout.String(), "\n") {
@@ -297,7 +435,7 @@ func (c *coverageValidator) Check(stdout *bytes.Buffer, stderr *bytes.Buffer) er
 }
 
 func (p *goverify) runCheck(conf config, c check) chan checkResult {
-	p.logger.Printf("Running check %s\n", c.Name)
+	p.logger.Printf("Running check `%s`", c.String())
 	var params []string
 	var err error
 	checkOutput := make(chan checkResult)
@@ -370,6 +508,7 @@ func (p *goverify) innerCheckIteration(conf config, c check, param string) check
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := p.run(cmd)
+	p.logger.Printf("Stdout: %s | Stderr: %s", stdout.String(), stderr.String())
 	output := stdout.String() + stderr.String()
 	if err != nil {
 		return checkResult{
