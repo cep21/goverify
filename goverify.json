@@ -15,7 +15,7 @@
     }, {
       "macro": "go-cover",
       "validate": {
-        "coverage": 50
+        "coverage": 40
       }
     }
   ]
