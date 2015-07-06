@@ -84,6 +84,7 @@ var macros = `{
     "go-install": {
       "name": "Check that installs",
       "cmd": "go",
+      "godep": true,
       "check": {
         "args": ["install", "."]
       }
@@ -91,6 +92,7 @@ var macros = `{
     "go-cover": {
       "name": "code coverage",
       "cmd": "go",
+      "godep": true,
       "gotool": "cover",
       "install": {
         "cmd": "go",

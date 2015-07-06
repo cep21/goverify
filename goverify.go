@@ -105,6 +105,7 @@ type check struct {
 	Install *checkCmd `json:"install"`
 
 	Gotool string `json:"gotool"`
+	Godep  *bool  `json:"godep"`
 	Macro  string `json:"macro"`
 
 	Each *eachFileLister `json:"each"`
@@ -126,6 +127,9 @@ func (c *check) mergePropertiesFrom(macroDef check) {
 	c.Install = mergeCheckCmd(c.Install, macroDef.Install)
 
 	c.Gotool = nonEmptyStr(c.Gotool, macroDef.Gotool)
+	if c.Godep == nil {
+		c.Godep = macroDef.Godep
+	}
 
 	c.Each = mergeEachFileLister(c.Each, macroDef.Each)
 
@@ -517,6 +521,17 @@ func run(cmd *exec.Cmd) error {
 	return cmd.Run()
 }
 
+func hasGodepDirectory() bool {
+	_, err := os.Stat("Godeps")
+	if err == nil {
+		return true
+	}
+	if os.IsNotExist(err) {
+		return false
+	}
+	return false
+}
+
 func (p *goverify) innerCheckIteration(conf config, c check, param string) checkResult {
 	args := func() []string {
 		if p.fix && c.Fix != nil {
@@ -529,8 +544,15 @@ func (p *goverify) innerCheckIteration(conf config, c check, param string) check
 			args[i] = param
 		}
 	}
-	p.logger.Printf("Running command %s %s\n", c.Cmd, args)
-	cmd := exec.Command(c.Cmd, args...)
+	var cmdToRun string
+	if c.Godep != nil && *c.Godep && hasGodepDirectory() {
+		cmdToRun = "godep"
+		args = append([]string{"go"}, args...)
+	} else {
+		cmdToRun = c.Cmd
+	}
+	p.logger.Printf("Running command %s %s %v\n", cmdToRun, args, &c)
+	cmd := exec.Command(cmdToRun, args...)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
