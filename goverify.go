@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -17,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"io"
 )
 
 type checkResult struct {
