@@ -105,6 +105,17 @@ var macros = `{
         "type": "cover",
         "coverage": 100
       }
+    },
+    "gocoverdir": {
+      "name": "code coverage with profile output",
+      "cmd": "go",
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/cep21/gocoverdir"]
+      },
+      "check": {
+        "args": ["-race", "-timeout", "3s", "-cpu", "4", "-requiredcoverage", "100", "./..."]
+      }
     }
   }
 }
