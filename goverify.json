@@ -17,6 +17,11 @@
       "validate": {
         "coverage": 40
       }
+    }, {
+      "macro": "gocoverdir",
+      "check": {
+        "args": ["-race", "-logfile", "", "-timeout", "3s", "-cpu", "4", "-requiredcoverage", "40", "./..."]
+      }
     }
   ]
 }
