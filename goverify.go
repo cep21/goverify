@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"io"
 )
 
 type checkResult struct {
@@ -173,6 +174,9 @@ type goverify struct {
 	verbose    bool
 	logger     *log.Logger
 
+	cmdStdout io.Writer
+	cmdStderr io.Writer
+
 	run runCommand
 }
 
@@ -240,8 +244,12 @@ func (p *goverify) loadConfig() (*config, error) {
 func (p *goverify) main() error {
 	if p.verbose {
 		p.logger = log.New(os.Stderr, "", log.LstdFlags)
+		p.cmdStdout = os.Stdout
+		p.cmdStderr = os.Stderr
 	} else {
 		p.logger = log.New(ioutil.Discard, "", log.LstdFlags)
+		p.cmdStdout = ioutil.Discard
+		p.cmdStderr = ioutil.Discard
 	}
 	conf, err := p.loadConfig()
 	if err != nil {
@@ -564,10 +572,9 @@ func (p *goverify) innerCheckIteration(conf config, c check, param string) check
 	cmd := exec.Command(cmdToRun, args...)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	cmd.Stdout = io.MultiWriter(&stdout, p.cmdStdout)
+	cmd.Stderr = io.MultiWriter(&stderr, p.cmdStderr)
 	err := p.run(cmd)
-	p.logger.Printf("Stdout: %s | Stderr: %s", stdout.String(), stderr.String())
 	output := stdout.String() + stderr.String()
 	if err != nil {
 		return checkResult{
