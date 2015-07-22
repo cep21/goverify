@@ -115,6 +115,9 @@ var macros = `{
       },
       "check": {
         "args": ["-race", "-timeout", "3s", "-cpu", "4", "-requiredcoverage", "100", "./..."]
+      },
+      "validate": {
+        "type": "returncode"
       }
     }
   }

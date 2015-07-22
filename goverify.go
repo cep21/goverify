@@ -348,7 +348,7 @@ func (p *goverify) getValidator(c check) (cmdValidator, error) {
 		dest = &coverageValidator{}
 	} else if v.Type == "returncode" {
 		dest = &emptyValidator{
-			IgnoreMsg: []string{},
+			IgnoreMsg:       []string{},
 			IgnoreAllOutput: true,
 		}
 	} else {
@@ -369,8 +369,8 @@ type cmdValidator interface {
 
 type emptyValidator struct {
 	validator
-	IgnoreMsg []string `json:"ignoreMsg"`
-	IgnoreAllOutput bool `json:"ignoreOutput"`
+	IgnoreMsg       []string `json:"ignoreMsg"`
+	IgnoreAllOutput bool     `json:"ignoreOutput"`
 }
 
 func (c *emptyValidator) MergePropertiesFrom(val json.RawMessage) {
