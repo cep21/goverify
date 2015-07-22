@@ -20,7 +20,7 @@
     }, {
       "macro": "gocoverdir",
       "check": {
-        "args": ["-race", "-logfile", "", "-timeout", "3s", "-cpu", "4", "-requiredcoverage", "40", "./..."]
+        "args": ["-race", "-timeout", "3s", "-cpu", "4", "-requiredcoverage", "40", "./..."]
       }
     }
   ]

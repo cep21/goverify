@@ -114,7 +114,7 @@ var macros = `{
         "args": ["get", "github.com/cep21/gocoverdir"]
       },
       "check": {
-        "args": ["-race", "-logfile", "", "-timeout", "3s", "-cpu", "4", "-requiredcoverage", "100", "./..."]
+        "args": ["-race", "-timeout", "3s", "-cpu", "4", "-requiredcoverage", "100", "./..."]
       }
     }
   }
