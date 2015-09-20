@@ -81,6 +81,50 @@ var macros = `{
         "args": ["ls-files", "--", "*.go"]
       }
     },
+    "varcheck": {
+      "name": "varcheck check",
+      "cmd": "varcheck",
+      "check": {
+        "args": ["./..."]
+      },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/opennota/check/cmd/varcheck"]
+      }
+    },
+    "aligncheck": {
+      "name": "alignment check",
+      "cmd": "aligncheck",
+      "check": {
+        "args": ["./..."]
+      },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/opennota/check/cmd/aligncheck"]
+      }
+    },
+    "structcheck": {
+      "name": "Structure checks",
+      "cmd": "structcheck",
+      "check": {
+        "args": ["./..."]
+      },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/opennota/check/cmd/structcheck"]
+      }
+    },
+    "ineffassign": {
+      "name": "ineffassign assignments",
+      "cmd": "ineffassign",
+      "check": {
+        "args": ["$1"]
+      },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/gordonklaus/ineffassign"]
+      }
+    },
     "go-install": {
       "name": "Check that installs",
       "cmd": "go",

@@ -169,15 +169,15 @@ type config struct {
 
 type goverify struct {
 	configFile string
-	fix        bool
 	rootDir    string
-	verbose    bool
 	logger     *log.Logger
 
 	cmdStdout io.Writer
 	cmdStderr io.Writer
 
-	run runCommand
+	run     runCommand
+	fix     bool
+	verbose bool
 }
 
 var primaryMain = goverify{
