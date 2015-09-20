@@ -19,6 +19,8 @@
     }, {
       "macro": "ineffassign"
     }, {
+      "macro": "errcheck"
+    }, {
       "macro": "go-install"
     }, {
       "macro": "go-cover",

@@ -114,6 +114,17 @@ var macros = `{
         "args": ["get", "github.com/opennota/check/cmd/structcheck"]
       }
     },
+    "errcheck": {
+      "name": "Error checking",
+      "cmd": "errcheck",
+      "check": {
+        "args": ["./..."]
+      },
+      "install": {
+        "cmd": "go",
+        "args": ["get", "github.com/kisielk/errcheck"]
+      }
+    },
     "ineffassign": {
       "name": "ineffassign assignments",
       "cmd": "ineffassign",

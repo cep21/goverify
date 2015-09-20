@@ -57,17 +57,29 @@ var t1 = `{
   ]
 }`
 
+func panicIfNotNil(i interface{}) {
+	if i != nil {
+		panic(i)
+	}
+}
+
+func panicIfNotNil2(_ interface{}, i interface{}) {
+	if i != nil {
+		panic(i)
+	}
+}
+
 func TestSimpleCover(t *testing.T) {
 	fout, err := ioutil.TempFile("", "TestSimpleCover")
 	noError(t, err)
 	filename := fout.Name()
-	defer os.Remove(filename)
-	fout.Close()
+	defer func() { panicIfNotNil(os.Remove(filename)) }()
+	panicIfNotNil(fout.Close())
 	noError(t, ioutil.WriteFile(filename, []byte(t1), os.FileMode(0600)))
 	m := &goverify{
 		run: func(cmd *exec.Cmd) error {
 			if strings.HasSuffix(cmd.Path, "git") {
-				cmd.Stdout.Write([]byte("hello.go"))
+				panicIfNotNil2(cmd.Stdout.Write([]byte("hello.go")))
 			}
 			return nil
 		},
