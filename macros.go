@@ -59,7 +59,7 @@ var macros = `{
       },
       "install": {
         "cmd": "go",
-        "args": ["get", "github.com/golang/lint/golint"]
+        "args": ["get", "golang.org/x/lint/golint"]
       },
       "each": {
         "cmd": "git",
